@@ -18,6 +18,14 @@ To convert rm files to other formats, you can use [rmc](https://github.com/rickl
 
 - Initial release
 
+
+# operation
+
+Test the parser:
+``` shellsession
+$ python -m src.rmscene print-blocks page_file.rm
+```
+
 ## Acknowledgements
 
 https://github.com/ddvk/reader helped a lot in figuring out the structure and meaning of the files.
