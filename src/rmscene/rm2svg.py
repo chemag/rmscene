@@ -37,9 +37,6 @@ from .utils import (
 _logger = logging.getLogger(__name__)
 
 
-SCREEN_WIDTH = 1404
-SCREEN_HEIGHT = 1872
-
 SVG_HEADER = string.Template(
     """
 <svg xmlns="http://www.w3.org/2000/svg" height="$height" width="$width">
@@ -54,9 +51,6 @@ SVG_HEADER = string.Template(
     </script>
 """
 )
-
-
-XPOS_SHIFT = SCREEN_WIDTH / 2
 
 
 @dataclass
@@ -88,7 +82,7 @@ def rm2pdf(infile, outfile):
     assert returncode == 0
 
 
-def rm2svg(infile, outfile, debug=0):
+def rm2svg(infile, outfile, minwidth=1404, minheight=1872, debug=0):
     # parse the lines (.rm) input file into a series of blocks
     with open(infile, "rb") as infh:
         infile_datastream = io.BufferedReader(infh)
@@ -97,7 +91,7 @@ def rm2svg(infile, outfile, debug=0):
         blocks = list(read_blocks(infile_datastream))
 
     # get page info
-    page_info = get_page_info(blocks, debug)
+    page_info = get_page_info(blocks, minwidth, minheight, debug)
 
     with open(outfile, "w") as output:
         # add svg header
@@ -132,6 +126,8 @@ def rm2svg(infile, outfile, debug=0):
         # END notebook
         output.write("</svg>\n")
         output.close()
+
+    return page_info
 
 
 def draw_slib(block, output, page_info, debug):
@@ -338,7 +334,7 @@ def get_limits_rtb(block, page_info, debug):
     return xmin, xmax, ymin, ymax
 
 
-def get_dimensions(blocks, page_info, debug):
+def get_dimensions(blocks, page_info, minwidth, minheight, debug):
     # get block limits
     xmin, xmax, ymin, ymax = get_limits(blocks, page_info, debug)
     if debug > 2:
@@ -346,10 +342,11 @@ def get_dimensions(blocks, page_info, debug):
     # {xpos,ypos} coordinates are based on the top-center point
     # of the doc **iff there are no text boxes**. When you add
     # text boxes, the xpos/ypos values change.
-    xpos_delta = XPOS_SHIFT
-    if xmin is not None and (xmin + XPOS_SHIFT) < 0:
+    xpos_shift = minwidth / 2
+    xpos_delta = xpos_shift
+    if xmin is not None and (xmin + xpos_shift) < 0:
         # make sure there are no negative xpos
-        xpos_delta += -(xmin + XPOS_SHIFT)
+        xpos_delta += -(xmin + xpos_shift)
     ypos_delta = 0
     if ymin is not None and ymin < 0:
         ypos_delta = -ymin
@@ -358,7 +355,7 @@ def get_dimensions(blocks, page_info, debug):
     width = int(
         math.ceil(
             max(
-                SCREEN_WIDTH,
+                minwidth,
                 xmax - xmin if xmin is not None and xmax is not None else 0,
             )
         )
@@ -366,7 +363,7 @@ def get_dimensions(blocks, page_info, debug):
     height = int(
         math.ceil(
             max(
-                SCREEN_HEIGHT,
+                minheight,
                 ymax - ymin if ymin is not None and ymax is not None else 0,
             )
         )
@@ -383,7 +380,7 @@ def get_dimensions(blocks, page_info, debug):
 # in a dictionary.
 # Note that both the STB and the SGIB objects seem to do the same mappings.
 # We will keep both.
-def get_page_info(blocks, debug):
+def get_page_info(blocks, minwidth, minheight, debug):
     page_info = PageInfo()
     # parse the TNB/STB/SGIB blocks to get the page tree
     for block in blocks:
@@ -402,6 +399,6 @@ def get_page_info(blocks, debug):
         page_info.width,
         page_info.xpos_delta,
         page_info.ypos_delta,
-    ) = get_dimensions(blocks, page_info, debug)
+    ) = get_dimensions(blocks, page_info, minwidth, minheight, debug)
 
-    return page_info
+    return page_info # useful info for caller, e.g. to correctly render foreground notes on a background PDF
