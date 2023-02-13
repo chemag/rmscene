@@ -127,6 +127,8 @@ def rm2svg(infile, outfile, minwidth=1404, minheight=1872, debug=0):
         output.write("</svg>\n")
         output.close()
 
+    return page_info
+
 
 def draw_slib(block, output, page_info, debug):
     if debug > 1:
@@ -399,4 +401,4 @@ def get_page_info(blocks, minwidth, minheight, debug):
         page_info.ypos_delta,
     ) = get_dimensions(blocks, page_info, minwidth, minheight, debug)
 
-    return page_info
+    return page_info # useful info for caller, e.g. to correctly render foreground notes on a background PDF
